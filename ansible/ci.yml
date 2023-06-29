@@ -1,0 +1,24 @@
+---
+- hosts: all
+  vars:
+    server_user: server-user
+  become: true
+  tasks:
+
+    - name: Stop FastAPI old container
+      docker_container:
+        name: fastapi-app
+        state: stopped
+
+    - name: Remove FastAPI old container
+      docker_container:
+        name: fastapi-app
+        state: absent
+
+    - name: Deploy FastAPI new container
+      docker_container:
+        image: imperialsys/fastapi-gaston:latest
+        name: fastapi-app
+        state: started
+        ports:
+          - 8000:8000

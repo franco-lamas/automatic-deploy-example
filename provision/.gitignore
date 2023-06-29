@@ -1,0 +1,5 @@
+.terraform/
+aws_key
+aws_key.pub
+.terraform.*
+terraform.*

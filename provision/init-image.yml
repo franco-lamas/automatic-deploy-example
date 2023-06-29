@@ -1,0 +1,84 @@
+---
+- hosts: all
+  vars:
+    server_user: ubuntu
+  become: true
+  tasks:
+    - name: Set timezone to America/Montevideo
+      timezone:
+        name: America/Montevideo
+        
+    - name: Update packages
+      apt:
+        update_cache: true
+        upgrade: dist
+        force_apt_get: true
+    - name: Install required system packages
+      apt:
+        pkg:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+          - python3-pip
+          - virtualenv
+          - python3-setuptools
+        state: present
+        update_cache: true
+
+    - name: Update apt and install docker-ce
+      apt:
+        name: 
+          - docker
+          - docker.io
+          - docker-compose
+          - docker-registry
+        state: present
+        update_cache: true
+    - name: Ensure Docker Service is started and enabled
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Create directorie for docker files              
+      file:
+        path: /home/{{ server_user }}/docker
+        state: directory
+    - name: Create Scripts and directories
+      copy:
+        src:  ./docker-compose.yml
+        dest: /home/{{ server_user }}/docker/docker-compose.yml
+      tags:
+        - simple_copy
+
+    - name: Create a network
+      docker_network:
+        name: app_network
+
+    - name: Deploy DB for app
+      docker_container:
+        image: mysql:5.7.22
+        name: db-app
+        state: started
+        recreate: no
+        restart_policy: unless-stopped
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: laravel
+          MYSQL_USER: root
+          MYSQL_PASSWORD: root
+        volumes:
+          - "/home/{{server_user}}/docker/mysql:/var/lib/mysql"
+        networks:
+          - name: app_network
+        ports:
+          - 3306:3306
+
+    - name: Deploy DB for app
+      docker_container:
+        image: imperialsys/fastapi-gaston:latest
+        name: fastapi-app
+        state: started
+        ports:
+          - 8000:8000
